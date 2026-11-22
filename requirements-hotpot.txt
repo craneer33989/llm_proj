@@ -10,3 +10,4 @@ huggingface-hub>=0.34,<1
 qdrant-client==1.20.0
 # HTTP integration tests and external actor adapters.
 httpx>=0.28,<1
+psutil>=7,<8

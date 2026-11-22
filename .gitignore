@@ -13,3 +13,18 @@ data/hotpotqa/raw/*.part
 data/hotpotqa/*/index/
 data/hotpotqa/runtime/
 runs/reopd/
+
+# Downloaded datasets, generated training records, and model checkpoints.
+data/experiments/
+data/external/
+data/hotpotqa/
+data/phase2/autonomous/
+data/phase2/diagnostic-holdout.jsonl
+data/phase2/expanded/
+data/phase2/failure-replays.jsonl
+data/phase2/manifest.json
+data/phase2/sft-seed.jsonl
+data/rl/
+data/sft/deepseek-20261113/*
+data/trajectories/v1/*
+evaluation/teacher-sft-epoch1-test-20261114/*

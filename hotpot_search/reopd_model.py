@@ -42,14 +42,22 @@ def checkpoint(name):
 
 
 class Actor:
-    def __init__(self, name, max_tokens=512, adapter=None, device=None):
+    def __init__(self, name, max_tokens=512, adapter=None, device=None, direct_device_load=False):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         source = checkpoint(name)
         self.tokenizer = AutoTokenizer.from_pretrained(source, padding_side="left", local_files_only=True)
-        self.model = AutoModelForCausalLM.from_pretrained(source, dtype=torch.bfloat16, local_files_only=True)
-        self.model.to(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        if direct_device_load:
+            if device is not None or not torch.cuda.is_available():
+                raise RuntimeError("Direct model loading requires an available CUDA GPU")
+            self.model = AutoModelForCausalLM.from_pretrained(
+                source, dtype=torch.bfloat16, local_files_only=True,
+                device_map="cuda:0", low_cpu_mem_usage=True,
+            )
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(source, dtype=torch.bfloat16, local_files_only=True)
+            self.model.to(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         if adapter:
             from peft import PeftModel
 
