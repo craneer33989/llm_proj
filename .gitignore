@@ -1,0 +1,15 @@
+.venv/
+.model-venv/
+.cache/
+__pycache__/
+.pytest_cache/
+data/reports/
+data/runtime/
+*.log
+tmp/
+data/trajectories/*/corpus*.sqlite3*
+data/hotpotqa/raw/*.parquet
+data/hotpotqa/raw/*.part
+data/hotpotqa/*/index/
+data/hotpotqa/runtime/
+runs/reopd/
