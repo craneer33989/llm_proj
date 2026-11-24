@@ -1,0 +1,61 @@
+{
+  "n": 100,
+  "post_freeze": true,
+  "full": {
+    "base-bm25": {
+      "answer_em": 57,
+      "answer_grounded": 42,
+      "strict": 27
+    },
+    "base": {
+      "answer_em": 53,
+      "answer_grounded": 40,
+      "strict": 27
+    },
+    "A": {
+      "answer_em": 50,
+      "answer_grounded": 40,
+      "strict": 27
+    },
+    "a-hybrid": {
+      "answer_em": 50,
+      "answer_grounded": 39,
+      "strict": 25
+    },
+    "B": {
+      "answer_em": 51,
+      "answer_grounded": 39,
+      "strict": 23
+    },
+    "C": {
+      "answer_em": 52,
+      "answer_grounded": 41,
+      "strict": 25
+    },
+    "D": {
+      "answer_em": 52,
+      "answer_grounded": 37,
+      "strict": 23
+    },
+    "selected-sft": {
+      "answer_em": 64,
+      "answer_grounded": 57,
+      "strict": 46
+    },
+    "route": {
+      "answer_em": 55,
+      "answer_grounded": 45,
+      "strict": 31
+    }
+  },
+  "paired": {
+    "base": {
+      "strict_gains": 23,
+      "strict_losses": 4
+    },
+    "A": {
+      "strict_gains": 22,
+      "strict_losses": 3
+    }
+  }
+}

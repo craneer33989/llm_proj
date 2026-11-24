@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 RUN = ROOT / "runs/reopd/formal-v2-expanded"
 FINAL = RUN / "final-test"
 EXTRA = RUN.parent / "course-extra"
-EXPERIMENTS = {"base-bm25": ("base", "bm25"), "a-hybrid": ("sft", "hybrid")}
+EXPERIMENTS = {"base-bm25": ("base", "bm25"), "a-hybrid": ("sft", "hybrid"),
+               "selected-sft": ("sft", "bm25")}
 
 
 def frozen_cohort():
@@ -33,7 +34,7 @@ def frozen_cohort():
     return plan, store, specs
 
 
-def run_control(name, plan, store, specs):
+def run_control(name, plan, store, specs, selected_run=None):
     model, mode = EXPERIMENTS[name]
     options = plan["evaluation"]
     adapter = None
@@ -41,7 +42,24 @@ def run_control(name, plan, store, specs):
     with closing(SearchEngine(DEFAULT_DATA)) as engine:
         if reopd.environment_lock(engine) != plan["environment"]:
             raise ValueError("Current BM25 environment does not match the frozen test")
-        if mode == "hybrid":
+        runtime_hashes = {file: sha256(ROOT / "hotpot_search" / file) for file in plan["code_sha256"]}
+        if selected_run:
+            if runtime_hashes != plan["code_sha256"]:
+                raise ValueError("Frozen evaluation source hashes differ from the recorded plan")
+            dev = read_json(selected_run / "grounded-summary.json")
+            scores = dev["full"]["adapter"]
+            if dev["n"] != 100 or scores["strict"] <= 24 or scores["answer_grounded"] <= 41:
+                raise ValueError("Selected SFT did not clear both development thresholds")
+            recipe = read_json(selected_run / "recipe.json")
+            if recipe["environment"] != plan["environment"] or recipe["student"] != plan["student"]:
+                raise ValueError("Selected adapter was trained with a different environment or student")
+            adapter = selected_run / "adapter"
+            receipt = read_json(selected_run / "metrics.json")
+            adapter_hashes = {file: sha256(adapter / file)
+                              for file in ("adapter_config.json", "adapter_model.safetensors")}
+            if not receipt["adapter_reloaded"] or adapter_hashes != receipt["adapter_sha256"]:
+                raise ValueError("Selected adapter differs from the verified artifact")
+        elif mode == "hybrid":
             adapter = arm_paths(RUN, plan["update_tokens"], plan["primary"]["seed"], plan["failure_type"])["A"]
             adapter_hashes = {file: sha256(adapter / file) for file in plan["primary"]["adapters"]["A"]}
             if adapter_hashes != plan["primary"]["adapters"]["A"]:
@@ -63,8 +81,11 @@ def run_control(name, plan, store, specs):
             verify_lock(out / "manifest.json", {
                 "split": "test", "specs": specs, "model": MODELS[model], "model_sha256": model_hashes,
                 "adapter_sha256": adapter_hashes, "environment": reopd.environment_lock(engine),
+                **({"development_summary_sha256": sha256(selected_run / "grounded-summary.json"),
+                    "development_summary": dev, "selected_training_seconds": receipt["seconds"],
+                    "selected_run": selected_run.name} if selected_run else {}),
                 "script_sha256": sha256(Path(__file__)),
-                "runtime_sha256": {file: sha256(ROOT / "hotpot_search" / file) for file in plan["code_sha256"]},
+                "runtime_sha256": runtime_hashes,
                 "config": asdict(reopd.CONFIG), "temperature": 0.0, **options,
             })
             actor = Actor(model, max_tokens=options["max_tokens"], adapter=adapter)
@@ -78,12 +99,15 @@ def run_control(name, plan, store, specs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("experiment", choices=(*EXPERIMENTS, "compare"))
+    parser.add_argument("--selected-run", type=Path)
     args = parser.parse_args()
+    if (args.experiment == "selected-sft") != (args.selected_run is not None):
+        parser.error("--selected-run is required for selected-sft and applies only to that experiment")
     EXTRA.mkdir(parents=True, exist_ok=True)
     with FileLock(EXTRA / ".lock", timeout=0):
         plan, store, specs = frozen_cohort()
         if args.experiment != "compare":
-            run_control(args.experiment, plan, store, specs)
+            run_control(args.experiment, plan, store, specs, args.selected_run)
         else:
             paths = {"base": FINAL / "base", "base_bm25": EXTRA / "base-bm25",
                      "A_bm25": FINAL / "A", "A_hybrid": EXTRA / "a-hybrid"}

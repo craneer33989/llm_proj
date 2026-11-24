@@ -1,0 +1,11 @@
+{
+  "n": 100,
+  "before": 20,
+  "after": 34,
+  "before_em": 43.0,
+  "after_em": 57.0,
+  "before_calls": 113,
+  "after_calls": 160,
+  "gains": 17,
+  "losses": 3
+}

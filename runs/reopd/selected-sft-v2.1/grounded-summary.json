@@ -1,0 +1,83 @@
+{
+  "n": 100,
+  "full": {
+    "baseline": {
+      "answer_em": 43,
+      "answer_grounded": 31,
+      "strict": 20
+    },
+    "old_A": {
+      "answer_em": 50,
+      "answer_grounded": 39,
+      "strict": 24
+    },
+    "adapter": {
+      "answer_em": 57,
+      "answer_grounded": 50,
+      "strict": 34
+    }
+  },
+  "first_search": {
+    "single_hop_enough": {
+      "n": 17,
+      "baseline": {
+        "answer_em": 10,
+        "answer_grounded": 10,
+        "strict": 0
+      },
+      "adapter": {
+        "answer_em": 12,
+        "answer_grounded": 12,
+        "strict": 1
+      },
+      "new_query": 3,
+      "added_evidence": 2,
+      "grounded_gains": 2,
+      "grounded_losses": 0
+    },
+    "true_early_stop": {
+      "n": 10,
+      "baseline": {
+        "answer_em": 2,
+        "answer_grounded": 0,
+        "strict": 0
+      },
+      "adapter": {
+        "answer_em": 2,
+        "answer_grounded": 0,
+        "strict": 0
+      },
+      "new_query": 3,
+      "added_evidence": 0,
+      "grounded_gains": 0,
+      "grounded_losses": 0
+    }
+  },
+  "passes_gate": true,
+  "paired": {
+    "baseline": {
+      "grounded": {
+        "gains": 21,
+        "losses": 2,
+        "mcnemar_exact_p": 6.604194641113281e-05
+      },
+      "strict": {
+        "gains": 17,
+        "losses": 3,
+        "mcnemar_exact_p": 0.0025768280029296875
+      }
+    },
+    "old_A": {
+      "grounded": {
+        "gains": 17,
+        "losses": 6,
+        "mcnemar_exact_p": 0.03468966484069824
+      },
+      "strict": {
+        "gains": 13,
+        "losses": 3,
+        "mcnemar_exact_p": 0.021270751953125
+      }
+    }
+  }
+}

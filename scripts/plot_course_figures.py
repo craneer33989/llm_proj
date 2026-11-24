@@ -3,7 +3,7 @@ import argparse
 import os
 from pathlib import Path
 
-from hotpot_search.course_view import ARMS, CATEGORIES, COLORS, failure_counts, load_tables
+from hotpot_search.course_view import ARMS, CATEGORIES, COLORS, answer_grounded, failure_counts, load_tables
 from hotpot_search.reopd_final import arm_paths, read_json
 from hotpot_search.routed_eval import COHORTS, evaluate_cohort
 
@@ -83,16 +83,51 @@ def transfer_figure(plan):
     return fig
 
 
+def selected_figure(tables, gold, dev, selected):
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5), layout="constrained")
+    arms = ("base", "A", "selected-sft")
+    heldout = []
+    for arm in arms:
+        table = tables[arm]
+        heldout.append({"answer_em": sum(row["answer_em"] for row in table.values()),
+                        "answer_grounded": sum(answer_grounded(row, gold[row["qid"]]) for row in table.values()),
+                        "strict": sum(row["supported_success"] for row in table.values())})
+    for ax, scores, title in zip(axes, ([dev["full"][k] for k in ("baseline", "old_A", "adapter")], heldout),
+                                 ("开发集 · 100 题", "留出集 · 100 题事后对照"), strict=True):
+        for index, (name, label, color) in enumerate((
+            ("answer_em", "Answer EM", "#566c80"),
+            ("answer_grounded", "Answer-Grounded", "#5370ad"),
+            ("strict", "Strict", "#2a8a74"),
+        )):
+            bars = ax.bar([x + (index - 1) * 0.24 for x in range(3)],
+                          [score[name] for score in scores], width=0.22, label=label, color=color)
+            ax.bar_label(bars, fmt="%.0f", padding=3)
+        ax.set_xticks(range(3), ("原搜索 SFT", "旧 A", selected.replace("selected-sft-", "精选 SFT ")))
+        ax.set(ylim=(0, 78), title=title, ylabel="通过题数")
+        ax.set_axisbelow(True)
+        ax.grid(axis="y", alpha=0.18)
+        ax.legend(loc="upper left", fontsize=9, frameon=False)
+    fig.suptitle("从首跳早答诊断到精选 SFT")
+    fig.supxlabel("DeepSeek Flash 回放揭示首跳已含答案依据 → 增加 Answer-Grounded → 对齐原学生早答现场训练",
+                  fontsize=10, color="#435366")
+    return fig
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "docs/figures")
     parser.add_argument("--font", type=Path)
     args = parser.parse_args()
     configure_font(args.font)
-    plan, _, specs = frozen_cohort()
+    plan, store, specs = frozen_cohort()
     tables, _ = load_tables(FINAL, EXTRA, {(qid, attempt) for qid, attempt, _ in specs}, require_controls=True)
     args.output.mkdir(parents=True, exist_ok=True)
-    for name, figure in (("failure-attribution", failure_figure(tables)), ("cost-and-transfer", transfer_figure(plan))):
+    figures = [("failure-attribution", failure_figure(tables)), ("cost-and-transfer", transfer_figure(plan))]
+    if "selected-sft" in tables:
+        selected = read_json(EXTRA / "selected-sft/manifest.json")
+        figures.append(("selected-sft-progress", selected_figure(
+            tables, store.gold["test"], selected["development_summary"], selected["selected_run"])))
+    for name, figure in figures:
         figure.savefig(args.output / f"{name}.png", dpi=300)
         figure.savefig(args.output / f"{name}.svg")
         plt.close(figure)

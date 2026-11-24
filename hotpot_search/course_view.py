@@ -15,6 +15,7 @@ ARMS = {
     "C": "C · 非定向混合 ReOPD",
     "D": "D · 定向恢复 ReOPD",
     "route": "早答复核路由（轨迹回放）",
+    "selected-sft": "精选 SFT（事后留出对照）",
 }
 CATEGORIES = {
     "pass": "严格有证答对", "zero_wrong": "零检索答错", "zero_right": "零检索答对",
@@ -23,6 +24,7 @@ CATEGORIES = {
 }
 COLORS = ("#13795b", "#bf4846", "#b58bd5", "#e6a343", "#52789b", "#a45676", "#698088", "#c9d1da")
 CONTROLS = {"base-bm25", "a-hybrid"}
+OPTIONAL_CONTROLS = {"selected-sft"}
 RESULT_HEADER = re.compile(r"^Doc (\d+)\(Title: [^\n]*?\) ", re.MULTILINE)
 
 
@@ -35,8 +37,10 @@ def load_tables(final, extra, expected, require_controls=False):
     for name in ARMS:
         if name == "route":
             continue
-        control = name in CONTROLS
+        control = name in CONTROLS | OPTIONAL_CONTROLS
         path = (extra if control else final) / name
+        if name in OPTIONAL_CONTROLS and not all((path / file).is_file() for file in ("episodes.jsonl", "scores.jsonl")):
+            continue
         if control and not require_controls and not all((path / file).is_file() for file in ("episodes.jsonl", "scores.jsonl")):
             pending.append(ARMS[name])
             continue

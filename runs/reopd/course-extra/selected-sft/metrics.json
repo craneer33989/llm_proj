@@ -1,0 +1,14 @@
+{
+  "requested": 100,
+  "scorable": 100,
+  "backend_errors": 0,
+  "finished": 99,
+  "calls": 152,
+  "answer_em_sum": 64.0,
+  "answer_f1_sum": 71.67089947089947,
+  "support_doc_coverage_sum": 72.0,
+  "support_sentence_recall_sum": 73.0,
+  "answer_with_all_support_docs_sum": 46,
+  "supported_success_sum": 46,
+  "early_stop_sum": 21
+}

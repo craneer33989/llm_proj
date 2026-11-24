@@ -13,7 +13,8 @@ import pandas as pd
 import streamlit as st
 
 from hotpot_search.course_view import (
-    ARMS, CATEGORIES, COLORS, CONTROLS, failure_counts, load_tables, route_source, search_calls, support_hits,
+    ARMS, CATEGORIES, COLORS, CONTROLS, OPTIONAL_CONTROLS, answer_grounded, failure_counts, load_tables,
+    route_source, search_calls, support_hits,
 )
 from hotpot_search.demo_run import RESIDENT_MODELS, ResidentSearch, validate_question
 from hotpot_search.reopd_final import HeldOutStore, read_json
@@ -142,24 +143,33 @@ def artifact_stamp():
     files = [RUN / "complete.json", DEFAULT_DATA / "manifest.json", DEFAULT_DATA / "test.jsonl",
              DEFAULT_DATA / "private/test.gold.jsonl"]
     for arm in ARMS.keys() - {"route"}:
-        path = (EXTRA if arm in CONTROLS else RUN) / arm
+        path = (EXTRA if arm in CONTROLS | OPTIONAL_CONTROLS else RUN) / arm
         files.extend(path / name for name in ("episodes.jsonl", "scores.jsonl"))
     return tuple((str(path), path.stat().st_mtime_ns if path.is_file() else None) for path in sorted(files))
 
 
-def show_summary(tables):
+def show_summary(tables, gold):
     summaries, chart_rows = [], []
     for arm, table in tables.items():
         n = len(table)
         counts = failure_counts(table)
-        summaries.append({"模型": ARMS[arm], "有证答对": f"{counts['pass']}/{n}",
+        grounded = sum(answer_grounded(row, gold[row["qid"]]) for row in table.values())
+        summaries.append({"模型": ARMS[arm], "Strict": f"{counts['pass']}/{n}",
+                          "Answer-Grounded": f"{grounded}/{n}",
                           "答案 EM": f"{sum(row['answer_em'] for row in table.values()):.0f}/{n}",
                           "搜索次数/题": round(sum(search_calls(tables, arm, key) for key in table) / n, 2)})
         for index, (kind, label) in enumerate(CATEGORIES.items()):
             chart_rows.append({"模型": ARMS[arm], "类别": label, "题数": counts[kind], "顺序": index})
     st.subheader(f"本地留出 · 同一批 {len(tables['base'])} 题")
     st.dataframe(pd.DataFrame(summaries), hide_index=True)
-    st.caption("五组为冻结成绩。通用基座、混合检索和路由为事后分析。路由的平均搜索次数包含两轮。")
+    st.caption("原搜索 SFT 与 A–D 为冻结成绩。其余为事后对照。路由的平均搜索次数包含两轮。")
+    if "selected-sft" in tables:
+        with st.expander("从早答诊断到精选 SFT"):
+            st.write("DeepSeek Flash 的回放发现部分首跳已经给出答案依据。随后增加 Answer-Grounded，"
+                     "区分已有直接答案依据与仍缺证据的早答，并对齐原学生犯错前的真实搜索历史制作训练样本。")
+            figure = ROOT / "docs/figures/selected-sft-progress.png"
+            if figure.is_file():
+                st.image(str(figure))
     with st.expander("查看失败分布"):
         category = alt.selection_point(fields=["类别"], bind="legend")
         bars = alt.Chart(pd.DataFrame(chart_rows)).mark_bar().encode(
@@ -218,7 +228,7 @@ def show_comparison():
     except (OSError, ValueError, KeyError) as error:
         show_error(error)
         return
-    show_summary(tables)
+    show_summary(tables, gold)
     if pending:
         st.caption("此工作区缺少对照产物。 " + "、".join(pending))
 
