@@ -1,0 +1,26 @@
+{
+  "successful_episodes": 292,
+  "pool_actions": 742,
+  "pool_qids": 150,
+  "pool_by_kind": {
+    "continue": 186,
+    "finish": 291,
+    "initial": 265
+  },
+  "epoch_actions": {
+    "continue": 48,
+    "initial": 48,
+    "finish": 24
+  },
+  "priority_qids": {
+    "early_stop": 12,
+    "wrong_without_search": 40
+  },
+  "scheduled_tokens": 29970,
+  "scheduled_actions": 249,
+  "scheduled_priority_actions": {
+    "wrong_without_search": 87,
+    "early_stop": 26
+  },
+  "schedule_sha256": "391e6e443401a488852f197264fbf4c28262015485422b46e17fbae6bf17f277"
+}

@@ -1,0 +1,19 @@
+{
+  "steps": 249,
+  "student_update_tokens": 29970,
+  "optimizer_steps": 32,
+  "student_sampled_tokens": 0,
+  "prefix_replay_calls": 170,
+  "policy_search_calls": 0,
+  "teacher_scoring_input_tokens": 0,
+  "seconds": 180.68049840000458,
+  "peak_allocated_bytes": 9157061632,
+  "peak_reserved_bytes": 10668212224,
+  "adapter_reloaded": true,
+  "adapter_sha256": {
+    "adapter_config.json": "f717922b380694fe79c3ba45c747128f2d95d7942dbbcffde67103637840751a",
+    "adapter_model.safetensors": "9bda46249435341199b6d4bc2d8a0043b445cea5ec1e3185115af39f11025a20"
+  },
+  "adapter_changed": true,
+  "teacher_unchanged": null
+}

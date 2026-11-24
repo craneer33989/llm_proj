@@ -9,7 +9,7 @@ import time
 from types import SimpleNamespace
 
 from .course_view import answer_evidence, answer_grounded
-from .reopd import Rollout, clean, digest, environment_lock, initial_messages, parse
+from .reopd import Rollout, clean, digest, environment_lock, initial_messages, parse, render
 from .reopd_model import Actor, MODELS, checkpoint
 from .reopd_run import collect, verify_lock, write_json, write_rows
 from .download import sha256
