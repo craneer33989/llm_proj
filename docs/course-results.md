@@ -16,10 +16,16 @@
 
 ## 课堂回放
 
-先展示冻结留出测试总表与路由行，再打开以下同题轨迹。60 秒视频在本地以展示页画面和字幕呈现。 [课堂回放视频](../runs/reopd/course-extra/wiki-demo.webm)
+先展示 8 组总表与失败分布，再打开以下同题轨迹。60 秒视频展示新页面的实拍画面和字幕。 [课堂回放视频](../runs/reopd/course-extra/wiki-demo-classroom.webm)
 
 - **《Honour Killing》配乐作者的出生年**（`5a7dbe325542995ed0d1666d`）。原搜索 SFT 零检索提交 1942。A 先查出配乐作者 Uttam Singh，再查出生年 1948，最终答对并看到完整支持句。
 - **Ronda Rousey 案例**（`5a73c3b555429905862fe0b6`）。原搜索 SFT 经两次搜索正确提交 Ronda Rousey。两组首条查询相同，A 第一次搜索后就提交 Jeremy Jackson，支持证据未齐。零检索复核规则在这道题上保留原搜索 SFT 的轨迹。
+
+![本地 100 题通过与失败分布](figures/failure-attribution.png)
+
+![训练墙钟开销与三个队列的严格通过率](figures/cost-and-transfer.png)
+
+两图可用 `python -m scripts.plot_course_figures` 从保存的日志生成。 [失败分布 SVG](figures/failure-attribution.svg) · [成本与外评 SVG](figures/cost-and-transfer.svg)
 
 各行均为相同 100 题。失败类别按实际终止状态和已看到的证据归类，证据齐但答错仍需逐题核查原因。
 正常提交可发生在第 6 次搜索之后。零检索答对只表示轨迹里没有搜索证据。

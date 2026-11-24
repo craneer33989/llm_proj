@@ -9,6 +9,10 @@ from .reopd import Rollout
 from .reopd_model import Actor
 from .search import SearchEngine
 
+ROOT = Path(__file__).resolve().parents[1]
+RESIDENT_MODELS = ("sft", "A", "route")
+MODELS = ("base", "sft", "teacher", "A", "B", "C", "D", "route")
+
 
 def run_question(engine, actor, question):
     rollout = Rollout(engine, {"id": "interactive", "question": question}, "interactive")
@@ -43,42 +47,85 @@ def check_resources():
         )
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=("base", "sft", "teacher", "A", "B", "C", "D", "route"), required=True)
-    args = parser.parse_args()
-    question = json.load(sys.stdin)["question"]
+def validate_question(question):
     if not isinstance(question, str) or not 1 <= len(question.strip()) <= 500:
         raise ValueError("Question must be 1–500 characters")
+
+
+def adapter_path(arm):
+    path = ROOT / "runs/reopd/formal-v2-expanded" / f"ablation-{arm}-12000tokens-42-wrong-without-search/adapter"
+    if not (path / "adapter_config.json").is_file():
+        raise FileNotFoundError(f"Local adapter is missing: {arm}")
+    return path
+
+
+def routed_result(first, retry):
+    if should_retry_with_directed_sft(first):
+        return {**retry(), "route": "directed_sft_after_no_search", "first_answer": first["answer"]}
+    return {**first, "route": "original_sft"}
+
+
+class ResidentSearch:
+    """Keep one search SFT checkpoint with adapter A. Callers serialize access."""
+
+    def __init__(self):
+        self.actor = None
+
+    def load(self):
+        if self.actor is None:
+            check_resources()
+            self.actor = Actor("sft", adapter=adapter_path("A"), direct_device_load=True)
+
+    def release(self):
+        if self.actor is not None:
+            import torch
+
+            self.actor = None
+            gc.collect()
+            torch.cuda.empty_cache()
+
+    def run(self, engine, model, question):
+        if model == "A":
+            return run_question(engine, self.actor, question)
+        with self.actor.model.disable_adapter():
+            first = run_question(engine, self.actor, question)
+        if model == "sft":
+            return first
+        return routed_result(first, lambda: run_question(engine, self.actor, question))
+
+
+def run_child_route(engine, question):
+    import torch
+
+    actor = Actor("sft", direct_device_load=True)
+    first = run_question(engine, actor, question)
+
+    def retry():
+        nonlocal actor
+        actor = None
+        gc.collect()
+        torch.cuda.empty_cache()
+        directed = Actor("sft", adapter=adapter_path("A"), direct_device_load=True)
+        return run_question(engine, directed, question)
+
+    return routed_result(first, retry)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--model", choices=MODELS, required=True)
+    model = parser.parse_args().model
+    question = json.load(sys.stdin)["question"]
+    validate_question(question)
     check_resources()
-    adapter = None
-    model = args.model
-    if model in "ABCD":
-        adapter = (Path(__file__).resolve().parents[1] / "runs" / "reopd" / "formal-v2-expanded" /
-                   f"ablation-{model}-12000tokens-42-wrong-without-search" / "adapter")
-        if not (adapter / "adapter_config.json").is_file():
-            raise FileNotFoundError(f"Local adapter is missing: {model}")
-        model = "sft"
     engine = SearchEngine()
     try:
-        actor = Actor("sft" if model == "route" else model, max_tokens=512, adapter=adapter, direct_device_load=True)
-        result = run_question(engine, actor, question)
         if model == "route":
-            result["route"] = "original_sft"
-            if should_retry_with_directed_sft(result):
-                first_answer = result["answer"]
-                del actor
-                gc.collect()
-                import torch
-                torch.cuda.empty_cache()
-                directed = (Path(__file__).resolve().parents[1] / "runs" / "reopd" / "formal-v2-expanded" /
-                            "ablation-A-12000tokens-42-wrong-without-search" / "adapter")
-                if not (directed / "adapter_config.json").is_file():
-                    raise FileNotFoundError(f"Local directed SFT adapter is missing: {directed}")
-                actor = Actor("sft", max_tokens=512, adapter=directed, direct_device_load=True)
-                result = run_question(engine, actor, question)
-                result["route"] = "directed_sft_after_no_search"
-                result["first_answer"] = first_answer
+            result = run_child_route(engine, question)
+        else:
+            adapter = adapter_path(model) if model in ("A", "B", "C", "D") else None
+            actor = Actor("sft" if adapter else model, adapter=adapter, direct_device_load=True)
+            result = run_question(engine, actor, question)
         print(json.dumps(result, ensure_ascii=False))
     finally:
         engine.close()

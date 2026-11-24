@@ -63,7 +63,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8020/search -ContentType 'a
 
 ## 重建与复核
 
-当前复用已有环境：`.venv` 有 PyArrow 和 pytest；`.model-venv` 有 PyTorch、Transformers、FastAPI、Qdrant。新环境可安装 `requirements-hotpot.txt`，其中 CUDA PyTorch 需按机器选择正确构建。
+模型环境统一使用 `.model-venv`，依赖见 `requirements-hotpot.txt`。CUDA PyTorch 需按机器选择正确构建。
 
 ```powershell
 # 首次需联网；完整训练集约 316 MiB，编码模型约 87 MiB。
@@ -71,12 +71,12 @@ python -X utf8 -m hotpot_search.download
 .\.model-venv\Scripts\python.exe -X utf8 -m hotpot_search.download_encoder
 
 # 已有 v1 不会被静默覆盖；重建使用新输出目录。
-.\.venv\Scripts\python.exe -X utf8 -m hotpot_search.prepare --output data/hotpotqa/v2
+.\.model-venv\Scripts\python.exe -X utf8 -m hotpot_search.prepare --output data/hotpotqa/v2
 .\.model-venv\Scripts\python.exe -X utf8 -m hotpot_search.search build --data data/hotpotqa/v2
 
 # 默认审计 v1；先停止服务，避免 Qdrant local 文件锁冲突。
 .\.model-venv\Scripts\python.exe -X utf8 -m hotpot_search.audit --limit 100
-.\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_hotpot_search.py -q -p no:cacheprovider
+.\.model-venv\Scripts\python.exe -X utf8 -m pytest tests/test_hotpot_search.py -q -p no:cacheprovider
 ```
 
 原始下载与编码模型下载均记录版本并校验权重/数据，不关闭 HTTPS 证书校验。普通重复运行会复用校验正确的原始分片。

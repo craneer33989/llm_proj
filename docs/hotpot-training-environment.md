@@ -108,7 +108,7 @@ python -X utf8 -m hotpot_search.training_smoke
 
 # 单元与接口测试；临时目录应使用项目内全新路径。
 $testRoot = Join-Path (Get-Location).Path ('tmp\hotpot-training-' + [Guid]::NewGuid().ToString('N'))
-.\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_hotpot_training.py tests/test_hotpot_search.py -q -p no:cacheprovider --basetemp $testRoot
+.\.model-venv\Scripts\python.exe -X utf8 -m pytest tests/test_hotpot_training.py tests/test_hotpot_search.py -q -p no:cacheprovider --basetemp $testRoot
 ```
 
 HTTP TestClient 需要 `httpx`；Windows 受限沙箱的内部事件循环可能停滞，应在本机正常 PowerShell 执行接口测试。当前已实测 15 项通过。
