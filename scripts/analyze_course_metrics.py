@@ -3,7 +3,7 @@ import argparse
 
 from transformers import AutoTokenizer
 
-from hotpot_search.course_view import ARMS, CATEGORIES, failure_counts, load_tables, route_source, search_calls
+from hotpot_search.course_view import ARMS, CATEGORIES, answer_grounded, failure_counts, load_tables, route_source, search_calls
 from hotpot_search.reopd_final import arm_paths, read_json
 from hotpot_search.reopd_model import checkpoint
 
@@ -28,7 +28,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--require-controls", action="store_true")
     args = parser.parse_args()
-    plan, _, specs = frozen_cohort()
+    plan, store, specs = frozen_cohort()
     expected = [(qid, attempt) for qid, attempt, _ in specs]
     adapters = arm_paths(RUN, plan["update_tokens"], plan["primary"]["seed"], plan["failure_type"])
     tables, pending = load_tables(FINAL, EXTRA, set(expected), args.require_controls)
@@ -56,19 +56,21 @@ def main():
     for name, table in tables.items():
         counts = failure_counts(table)
         em = sum(row["answer_em"] for row in table.values())
+        grounded = sum(answer_grounded(row, store.gold["test"][row["qid"]]) for row in table.values())
         calls = sum(search_calls(tables, name, key) for key in expected) / n
         mean_tokens = sum(tokens[name].values()) / n
         train = f"{seconds[name]:.2f}" if name in seconds else "—"
         if name in {"a-hybrid", "route"}:
             train = f"复用 A（{seconds['A']:.2f}）"
         failure_rows.append([ARMS[name], *(f"{counts[category]}/{n}" for category in CATEGORIES)])
-        efficiency_rows.append([ARMS[name], f"{em:.0f}/{n}", f"{counts['pass']}/{n}",
+        efficiency_rows.append([ARMS[name], f"{em:.0f}/{n}", f"{grounded}/{n}", f"{counts['pass']}/{n}",
                                 f"{calls:.2f}", f"{mean_tokens:.1f}", train])
     print("## 逐题结果与失败分布\n")
     print(markdown_table(["配置", *CATEGORIES.values()], failure_rows))
     print("\n## 准确率与开销\n")
-    print(markdown_table(["配置", "答案 EM", "严格有证答对", "搜索次数/题", "估计输出 token/题", "训练墙钟秒"],
+    print(markdown_table(["配置", "答案 EM", "Answer-Grounded", "Strict", "搜索次数/题", "估计输出 token/题", "训练墙钟秒"],
                          efficiency_rows))
+    print("\nAnswer-Grounded 要求答案匹配，且可见片段包含带答案或别名的标注支持句，或已看到全部支持句。是非题按全证据判定。")
     print()
     print(f"早答复核触发 {len(retried)}/{n} 题，开销包含原 SFT 首轮和触发后的 A 复核。")
     print("输出 token 由日志中的解码文本重新分词估算。原日志缺少生成 token ID、延迟与输入 token。")

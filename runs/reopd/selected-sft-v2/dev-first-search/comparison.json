@@ -1,0 +1,22 @@
+{
+  "n": 63,
+  "before": 20,
+  "after": 18,
+  "before_em": 34.0,
+  "after_em": 32.0,
+  "before_calls": 113,
+  "after_calls": 117,
+  "gains": 0,
+  "losses": 2,
+  "baseline_early_stop": {
+    "n": 27,
+    "adapter_search": 1,
+    "adapter_new_query": 1,
+    "adapter_added_evidence": 0,
+    "adapter_supported": 0
+  },
+  "added_evidence": {
+    "baseline": 14,
+    "adapter": 13
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "max_tokens": 512,
+  "group": "A",
+  "lr": 2e-05,
+  "gradient_accumulation": 8,
+  "finish_eos": true,
+  "update_tokens": 29970,
+  "environment": {
+    "upstream": "7a499d29ab07ff50dfde039f9d7a44dfe313b95e",
+    "config": {
+      "mode": "bm25",
+      "max_calls": 6,
+      "max_top_k": 3,
+      "max_observation_chars": 5000,
+      "max_total_observation_chars": 24000
+    },
+    "protocol_sha256": "e6639bc21403f32e52194d51be6019cbe13429262c812b44e517f4e345fda16c",
+    "split_manifest_sha256": "cecc04f4ae701617ab1662690e52cb1a2c76df259e10069d8724c0143235c873",
+    "index_manifest_sha256": "cca94c4debd53aa0a3151203a6e1717980894deee6dd7ad27522ac7f545cdeb3",
+    "index_sha256": "274a825d792deb6cafffdf42dfabcab44a9c99d4c8503b1fa37d23ff1dd5c53a"
+  },
+  "student": [
+    "baohao/Search_Qwen3-4B-Instruct-2507_SFT",
+    "19926d55956eaeb04775c89637a8948d750c3c80"
+  ]
+}

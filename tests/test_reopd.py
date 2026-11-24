@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from hotpot_search.reopd import CONFIG, Rollout, parse, render
+from hotpot_search.course_view import answer_evidence, answer_grounded
 from hotpot_search.reopd_ablation import build_pools, trajectory_prefixes
 from hotpot_search import reopd_baseline_pipeline, reopd_final
 from hotpot_search.reopd_compare import cohort_summary, paired_interval, review_baseline, validate_adapters
@@ -16,6 +17,7 @@ from hotpot_search.reopd_run import (
     write_json, write_rows,
 )
 from hotpot_search.reopd_train import action_logprobs, approved_prefixes, experiment_schedule, sampled_reverse_kl, update_action
+from hotpot_search.teacher_recovery import continue_episode
 
 
 TASK = {"id": "q", "question": "Where was the director of Film Atlas born?"}
@@ -53,6 +55,45 @@ def test_protocol_strict_tool_schema_and_roles():
     assert r"Answer: \boxed{your answer}" in prompt and "Question: Where was the director of Film Atlas born?" in prompt
     assert "Cedar City" not in prompt and "supporting_facts" not in prompt
     assert prompt.endswith("<|im_start|>assistant\n")
+
+
+def test_flash_recovery_sends_search_history_and_scores_only_locally():
+    env = Rollout(Engine(), TASK, "rl")
+    env.advance(search("Film Atlas"))
+    outputs = iter([search("Mira Finch"), r"\boxed{Cedar City}"])
+    requests = []
+
+    def complete(messages, tools, record):
+        assert tools is None
+        requests.append(messages)
+        response = {"model": "deepseek-flash", "choices": [
+            {"finish_reason": "stop", "message": {"content": next(outputs)}},
+        ]}
+        record({"event": "response", "body": response})
+        return response
+
+    result = continue_episode(env, SimpleNamespace(complete=complete), GOLD, force_first_search=True)
+    assert requests[0][-1] == {"role": "user", "content": f"<tool_response>\n{env.steps[0]['observation']}\n</tool_response>"}
+    assert "Your next action must be one search" in requests[0][0]["content"]
+    assert "Your next action must be one search" not in requests[1][0]["content"]
+    assert "Cedar City" not in json.dumps(requests[0])
+    assert "Mira Finch was born in Cedar City." in requests[1][-1]["content"]
+    assert result["score"]["supported_success"] and result["review_candidate"]
+    assert result["episode"]["calls"] == 2
+
+
+def test_grounded_answer_requires_labeled_evidence_in_its_source():
+    env = Rollout(Engine(), TASK, "rl")
+    env.advance(search("Mira Finch"))
+    env.advance(r"\boxed{Cedar City}")
+    episode, score = env.record(GOLD, 0)
+    logged = {**episode, **score}
+    assert answer_grounded(logged, GOLD) and not score["supported_success"]
+    assert answer_evidence(logged, GOLD, prefix=1)
+    unlinked = {**logged, "steps": [{**episode["steps"][0], "doc_ids": ["distractor"]}]}
+    assert not answer_evidence(unlinked, GOLD, prefix=1)
+    yes_no = {**GOLD, "answer": "yes"}
+    assert not answer_evidence(logged, yes_no, prefix=1)
 
 
 def test_scoring_and_replay_distinguish_guess_from_supported_answer(tmp_path):

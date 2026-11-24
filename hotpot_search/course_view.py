@@ -79,7 +79,7 @@ def failure_counts(table):
     return Counter(map(attribution, table.values()))
 
 
-def support_hits(episode, facts):
+def support_hits(episode, facts, *, verify_score=True):
     """Match support sentences by source document within logged, model-visible snippets."""
     exposed = {}
     for step in episode["steps"]:
@@ -96,6 +96,28 @@ def support_hits(episode, facts):
             for fact in facts]
     docs = {fact["doc_id"] for fact, hit in zip(facts, hits, strict=True) if hit}
     recall = sum(hits) / len(facts) if facts else 0.0
-    if recall != episode["support_sentence_recall"] or docs != set(episode["visible_support_docs"]):
+    if verify_score and (recall != episode["support_sentence_recall"] or docs != set(episode["visible_support_docs"])):
         return None
     return hits
+
+
+def answer_evidence(episode, gold, *, prefix=None):
+    """Check answer-bearing labeled evidence in the logged snippets."""
+    from .scoring import normalize_answer
+
+    facts = gold["supporting_facts"]
+    if prefix is not None:
+        episode = {"steps": episode["steps"][:prefix]}
+    hits = support_hits(episode, facts, verify_score=prefix is None)
+    if hits is None:
+        raise ValueError("Cannot verify the logged search observations")
+    if hits and all(hits):
+        return True
+    aliases = [normalize_answer(answer) for answer in [gold["answer"], *gold.get("aliases", [])]]
+    aliases = [answer for answer in aliases if answer and answer not in {"yes", "no", "noanswer"}]
+    return any(hit and any(f" {answer} " in f" {normalize_answer(fact['text'])} " for answer in aliases)
+               for hit, fact in zip(hits, facts, strict=True))
+
+
+def answer_grounded(episode, gold):
+    return bool(episode["answer_em"] and episode["reason"] == "finished" and answer_evidence(episode, gold))

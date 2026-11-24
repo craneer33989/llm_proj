@@ -6,12 +6,33 @@ import sys
 from pathlib import Path
 
 from .reopd import Rollout
-from .reopd_model import Actor
+from .reopd_model import Actor, checkpoint
 from .search import SearchEngine
 
 ROOT = Path(__file__).resolve().parents[1]
 RESIDENT_MODELS = ("sft", "A", "route")
 MODELS = ("base", "sft", "teacher", "A", "B", "C", "D", "route")
+
+
+class DemoActor(Actor):
+    def __init__(self, name, max_tokens=512, adapter=None):
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        if not torch.cuda.is_available():
+            raise RuntimeError("Direct model loading requires an available CUDA GPU")
+        source = checkpoint(name)
+        self.tokenizer = AutoTokenizer.from_pretrained(source, padding_side="left", local_files_only=True)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            source, dtype=torch.bfloat16, local_files_only=True,
+            device_map="cuda:0", low_cpu_mem_usage=True,
+        )
+        if adapter:
+            from peft import PeftModel
+
+            self.model = PeftModel.from_pretrained(self.model, adapter)
+        self.model.eval()
+        self.max_tokens = max_tokens
 
 
 def run_question(engine, actor, question):
@@ -74,7 +95,7 @@ class ResidentSearch:
     def load(self):
         if self.actor is None:
             check_resources()
-            self.actor = Actor("sft", adapter=adapter_path("A"), direct_device_load=True)
+            self.actor = DemoActor("sft", adapter=adapter_path("A"))
 
     def release(self):
         if self.actor is not None:
@@ -97,7 +118,7 @@ class ResidentSearch:
 def run_child_route(engine, question):
     import torch
 
-    actor = Actor("sft", direct_device_load=True)
+    actor = DemoActor("sft")
     first = run_question(engine, actor, question)
 
     def retry():
@@ -105,7 +126,7 @@ def run_child_route(engine, question):
         actor = None
         gc.collect()
         torch.cuda.empty_cache()
-        directed = Actor("sft", adapter=adapter_path("A"), direct_device_load=True)
+        directed = DemoActor("sft", adapter=adapter_path("A"))
         return run_question(engine, directed, question)
 
     return routed_result(first, retry)
@@ -124,7 +145,7 @@ def main():
             result = run_child_route(engine, question)
         else:
             adapter = adapter_path(model) if model in ("A", "B", "C", "D") else None
-            actor = Actor("sft" if adapter else model, adapter=adapter, direct_device_load=True)
+            actor = DemoActor("sft" if adapter else model, adapter=adapter)
             result = run_question(engine, actor, question)
         print(json.dumps(result, ensure_ascii=False))
     finally:
