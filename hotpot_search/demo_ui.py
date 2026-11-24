@@ -1,5 +1,6 @@
 """Local Streamlit viewer for live HotpotQA search and frozen model comparisons."""
 import json
+import os
 from pathlib import Path
 import subprocess
 
@@ -82,13 +83,17 @@ with live_tab:
                 try:
                     completed = subprocess.run(
                         [str(PYTHON), "-m", "hotpot_search.demo_run", "--model", model],
-                        input=json.dumps({"question": question}), text=True, encoding="utf-8",
+                        input=json.dumps({"question": question}, ensure_ascii=True).encode("utf-8"),
                         capture_output=True, cwd=ROOT, timeout=600, check=True,
+                        env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
                     )
-                    st.session_state["wiki_run"] = json.loads(completed.stdout)
+                    if not completed.stdout:
+                        raise ValueError("模型进程没有返回结果。" + completed.stderr.decode("utf-8", errors="replace")[-800:])
+                    st.session_state["wiki_run"] = json.loads(completed.stdout.decode("utf-8"))
                     st.session_state["wiki_model"] = model
-                except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as error:
-                    details = getattr(error, "stderr", "") or str(error)
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired, UnicodeError, ValueError) as error:
+                    stderr = getattr(error, "stderr", b"") or b""
+                    details = (stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else stderr) or str(error)
                     st.error("运行失败：" + details[-1200:])
     if result := st.session_state.get("wiki_run"):
         st.subheader("本次结果")
