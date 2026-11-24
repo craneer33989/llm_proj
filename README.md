@@ -30,10 +30,10 @@
 
 ### 展示页面
 
-已有语料索引、模型权重和 `.venv`、`.model-venv` 时，在项目根目录运行：
+已有语料索引、模型权重和 `.model-venv` 时，在项目根目录运行：
 
 ```powershell
-.\.venv\Scripts\python.exe -m streamlit run hotpot_search/demo_ui.py --server.address 127.0.0.1 --server.port 8502
+.\.model-venv\Scripts\python.exe -m streamlit run hotpot_search/demo_ui.py --server.address 127.0.0.1 --server.port 8502
 ```
 
 打开 [Wiki 多跳检索台](http://127.0.0.1:8502)。页面可输入英文问题，选本地模型实时运行，并逐步查看搜索查询、工具返回、停止与答案；“模型表现对比”读取已完成的冻结测试结果，可按同一道题回放不同模型。自由提问不读取参考答案，也不显示评分。实时选项均为 4B 模型，加载前要求至少 12 GiB 空闲显存和 8 GiB 空闲系统内存；A–D 还需要本地 LoRA 适配器。查看已保存对比无需加载模型。
@@ -67,6 +67,17 @@ Invoke-RestMethod http://127.0.0.1:8020/search -Method Post -ContentType 'applic
 
 下载的语料、构建的索引、模型权重和逐题运行产物在本地生成。评测脚本将模型可见的题目和用于评分的答案、支持句分开保存。
 
-## 财报原型
+## 课程展示补充评测
 
-仓库也保留独立的「财报证据台」。`setup.ps1` 和 `start.ps1` 用于财报原型，本地 Streamlit 页面在 [8501 端口](http://127.0.0.1:8501)。它支持上市公司报告问答、原文引用和轨迹展示。 [财报项目导读](项目通俗导读.md) · [财报 SFT 评测](evaluation/teacher-sft-epoch1-test-20261114/README.md)
+课程评测复用已冻结的 100 道本地题，补跑通用 Qwen3-4B 的 BM25 对照，以及定向 SFT A 的 Hybrid RRF 检索对照。命令需在仓库根目录执行，依赖已完成的冻结评测、本地权重和包含 Qdrant 的索引。已有混合索引可直接使用。
+
+```powershell
+$py = '.\.model-venv\Scripts\python.exe'
+& $py -X utf8 -m scripts.course_eval base-bm25
+& $py -X utf8 -m scripts.course_eval a-hybrid
+& $py -X utf8 -m scripts.course_eval compare
+& $py -X utf8 -m scripts.analyze_course_metrics --require-controls
+& $py -X utf8 -m pytest -q
+```
+
+补充运行写入 `runs/reopd/course-extra/`。按相同命令可继续未跑完的批次。并行的本地服务需要释放 Qdrant 索引后才能运行混合组。冻结成绩及展示解释见 [课程实验结果](docs/course-results.md)。

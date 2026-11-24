@@ -1,5 +1,4 @@
-# Isolated HotpotQA search environment. Existing .venv handles dataset prep;
-# existing .model-venv handles dense indexing/API. CUDA Torch comes from setup.ps1.
+# HotpotQA retrieval, evaluation, and demo. Install a CUDA Torch build for GPU inference.
 pyarrow>=19,<27
 fastapi>=0.115,<1
 uvicorn>=0.30,<1
@@ -11,3 +10,9 @@ qdrant-client==1.20.0
 # HTTP integration tests and external actor adapters.
 httpx>=0.28,<1
 psutil>=7,<8
+peft>=0.15,<1
+accelerate>=1.1,<2
+filelock>=3.16,<5
+streamlit>=1.45,<2
+pandas>=2.2,<4
+pytest>=8,<10

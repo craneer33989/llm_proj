@@ -1,6 +1,6 @@
 # HotpotQA 定向 ReOPD：本地实施与复现
 
-按[执行草案](reopd-execution-plan.md)实施本地实验。不使用财报 SFT 数据，不修改现有 HotpotQA 划分；训练和 dev 入口不读取 test，只有冻结后的独立 P5 入口读取。上游锁定 `BaohaoLiao/ReOPD@7a499d29ab07ff50dfde039f9d7a44dfe313b95e`；本地用 SQLite BM25 替换其外部检索，保留 Search-R1 单 action 的 JSON `search` 与 `\boxed{}` 短答。16 GiB 本机采用 Transformers/PEFT LoRA（学生 CUDA，冻结教师 CPU），**不是**上游 slime/Megatron 复跑。
+按[执行草案](reopd-execution-plan.md)实施本地实验。沿用现有 HotpotQA 划分；训练和 dev 入口不读取 test，正式成绩通过冻结后的独立 P5 入口评估。上游锁定 `BaohaoLiao/ReOPD@7a499d29ab07ff50dfde039f9d7a44dfe313b95e`；本地用 SQLite BM25 替换其外部检索，保留 Search-R1 单 action 的 JSON `search` 与 `\boxed{}` 短答。16 GiB 本机采用 Transformers/PEFT LoRA（学生 CUDA，冻结教师 CPU），**不是**上游 slime/Megatron 复跑。
 
 ## 最终结果（2026-11-22）
 

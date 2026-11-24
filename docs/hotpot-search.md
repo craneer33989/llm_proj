@@ -1,6 +1,6 @@
 # HotpotQA 本地数据与搜索环境
 
-这是独立于 `finance_agent` 的英文多跳搜索环境。当前完成的是原始数据下载、训练种子筛选、共享语料、持久化检索和工具环境，**尚未生成 DeepSeek 示范，尚未执行 SFT 或 RL**。
+本页描述英文多跳搜索环境的数据准备、共享语料、持久化检索和工具接口。后续 LoRA 训练和评测见 [ReOPD 实验记录](reopd-local.md)。
 
 已补充可供采集器/训练器调用的 reset/step/finish 闭环与独立终止评分，启动 `.\Start-HotpotSearch.ps1 -Training`，详见 [训练搜索环境](hotpot-training-environment.md)。它复用本页的检索服务，模型通过文本/JSON 交互。
 
@@ -49,7 +49,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8020/search -ContentType 'a
 .\Start-HotpotSearch.ps1 -Foreground
 ```
 
-只绑定 `127.0.0.1`，默认端口 8020，与已有财报服务分开。后台日志位于 `data/hotpotqa/runtime/`。单进程加载模型，以免重复占显存。首次 dense 请求会加载编码器；第一次延迟不代表稳态延迟。
+只绑定 `127.0.0.1`，默认端口 8020。后台日志位于 `data/hotpotqa/runtime/`。单进程加载模型，以免重复占显存。首次 dense 请求会加载编码器；第一次延迟不代表稳态延迟。
 
 ## API 和未来老师模型接入
 

@@ -5,10 +5,10 @@
 在项目根目录启动展示页面：
 
 ```powershell
-.\.venv\Scripts\python.exe -m streamlit run hotpot_search/demo_ui.py --server.address 127.0.0.1 --server.port 8502
+.\.model-venv\Scripts\python.exe -m streamlit run hotpot_search/demo_ui.py --server.address 127.0.0.1 --server.port 8502
 ```
 
-打开 http://127.0.0.1:8502，在“输入问题”中选择“早答复核路由”。页面显示最终答案、采用哪一路模型和逐步搜索轨迹。第一次运行可能需要加载 4B 权重；当原 SFT 未检索就提交答案时，会释放它再加载定向 SFT A，延迟会增加。模型权重、索引和两个虚拟环境按 README 准备。
+打开 http://127.0.0.1:8502，在“输入问题”中选择“早答复核路由”。页面显示最终答案、采用哪一路模型和逐步搜索轨迹。第一次运行可能需要加载 4B 权重；当原 SFT 未检索就提交答案时，会释放它再加载定向 SFT A，延迟会增加。模型权重、索引和模型环境按 README 准备。
 
 ## 规则与数据
 
@@ -28,7 +28,7 @@
 复算命令：
 
 ```powershell
-.\.venv\Scripts\python.exe -m hotpot_search.routed_eval
+.\.model-venv\Scripts\python.exe -m hotpot_search.routed_eval
 ```
 
 逐队列的配对差值、bootstrap 区间和源文件 SHA-256 保存在 `runs/reopd/routed-eval/report.json`。该脚本拒绝缺失评分、重复键或两组题目不一致的轨迹。
